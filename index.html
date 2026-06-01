@@ -50,7 +50,7 @@ const Storage = {
 };
 
 // ─── Currency Conversion ───
-const FX_RATES = { EUR: 1, USD: 0.92, CHF: 0.97, GBP: 1.17, JPY: 0.0060, HKD: 0.118 };
+const FX_RATES = { EUR: 1, USD: 0.92, CHF: 0.97, GBP: 1.17, JPY: 0.0060, HKD: 0.118, NOK: 0.085, CAD: 0.67, SEK: 0.088 };
 let liveFxRates = { ...FX_RATES }; // updated from API if available
 const toEUR = (amount, currency) => amount * (liveFxRates[currency] || FX_RATES[currency] || 1);
 const fmtEUR = (n) => n != null ? n.toLocaleString("de-DE", { style: "currency", currency: "EUR" }) : "–";
@@ -115,6 +115,9 @@ const getRegion = (ticker, currency) => {
   if (currency === "HKD") return "China/HK";
   if (currency === "CHF") return "Schweiz";
   if (currency === "GBP") return "UK";
+  if (currency === "NOK") return "Norwegen";
+  if (currency === "CAD") return "Kanada";
+  if (currency === "SEK") return "Schweden";
   if (currency === "USD" || (!ticker.includes(".") && !ticker.match(/^\d/))) return "USA";
   if (ticker.endsWith(".DE")) return "Deutschland";
   if (ticker.endsWith(".PA")) return "Frankreich";
@@ -225,7 +228,7 @@ const SECURITY_LOOKUP = [
   { wkn: "A2QHVL", isin: "US5533681012", ticker: "MP", name: "MP Materials Corp." },
   { wkn: "A2QA4J", isin: "US69608A1088", ticker: "PLTR", name: "Palantir Technologies Inc." },
   { wkn: "A14TK6", isin: "DE000A14TK62", ticker: "A14TK6.DE", name: "TKMS AG & Co. KGaA" },
-  { wkn: "A2QEGD", isin: "US4523271090", ticker: "INDI", name: "Indie Semiconductor Inc." },
+  { wkn: "A3CSBE", isin: "US45569U1016", ticker: "INDI", name: "Indie Semiconductor Inc." },
   { wkn: "697250", isin: "DE0006972508", ticker: "WAC.DE", name: "Wacker Chemie AG" },
   { wkn: "A2QJX9", isin: "US74767V1098", ticker: "QS", name: "QuantumScape Corp." },
   { wkn: "724190", isin: "DE0007241903", ticker: "724190.DE", name: "SER Systems AG (alt)" },
@@ -257,6 +260,10 @@ const SECURITY_LOOKUP = [
   { wkn: "A2N5NR", isin: "DE000A2N5NR4", ticker: "SHA.DE", name: "Schaeffler AG (Robotik-Aktuatoren)" },
   // --- Dividendenaktien ---
   { wkn: "555200", isin: "DE0005552004", ticker: "DHL.DE", name: "DHL Group" },
+  // --- Weitere Einzelwerte ---
+  { wkn: "A12A18", isin: "NO0010716582", ticker: "AKSO.OL", name: "Aker Solutions ASA" },
+  { wkn: "A2N7XK", isin: "CA1568281051", ticker: "CDPR.V", name: "Cerro de Pasco Resources Inc." },
+  { wkn: "A14TK6", isin: "SE0006425815", ticker: "PCELL.ST", name: "PowerCell Sweden AB" },
 ];
 
 function lookupSecurity(query) {
@@ -405,6 +412,10 @@ const MOCK_QUOTES = {
   "ALV.DE": { name: "Allianz SE", price: 379.20, change: 2.40, changePct: 0.64, prev: 376.80, high: 381.50, low: 375.90, volume: 1800000, pe: 12.8, dividend: 4.06, sector: "Versicherung", currency: "EUR", type: "stock" },
   "MUV2.DE": { name: "Münchener Rück AG", price: 525.60, change: 3.80, changePct: 0.73, prev: 521.80, high: 528.40, low: 520.50, volume: 620000, pe: 11.5, dividend: 3.8, sector: "Versicherung", currency: "EUR", type: "stock" },
   "DHL.DE": { name: "DHL Group", price: 38.50, change: 0.28, changePct: 0.73, prev: 38.22, high: 38.90, low: 38.10, volume: 3100000, pe: 14.2, dividend: 3.8, sector: "Logistik", currency: "EUR", type: "stock" },
+  // --- Weitere Einzelwerte ---
+  "AKSO.OL": { name: "Aker Solutions ASA", price: 42.10, change: -0.85, changePct: -1.98, prev: 42.95, high: 43.20, low: 41.80, volume: 950000, pe: 8.0, dividend: 7.5, sector: "Energie", currency: "NOK", type: "stock" },
+  "CDPR.V": { name: "Cerro de Pasco Resources Inc.", price: 0.56, change: 0.02, changePct: 3.70, prev: 0.54, high: 0.57, low: 0.53, volume: 12000, pe: null, dividend: 0, sector: "Rohstoffe", currency: "CAD", type: "stock" },
+  "PCELL.ST": { name: "PowerCell Sweden AB", price: 35.20, change: 1.10, changePct: 3.22, prev: 34.10, high: 35.80, low: 33.90, volume: 320000, pe: null, dividend: 0, sector: "Energie", currency: "SEK", type: "stock" },
 };
 
 function generateHistory(basePrice, days = 90) {
