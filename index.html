@@ -2926,24 +2926,6 @@ function PortfolioApp() {
   const [newsTicker, setNewsTicker] = useState("all"); // "all" or specific ticker
 
   // CSV Export
-  const exportCSV = useCallback(() => {
-    const headers = ["Ticker", "WKN", "ISIN", "Name", "Typ", "Sektor", "Stk.", "Kaufkurs", "Aktuell", "Währung", "Wert (Orig.)", "Wert (EUR)", "G/V (EUR)", "G/V %", "Div./Aktie", "Kaufdatum"];
-    const rows = portfolioMetrics.positions.map(p => {
-      const q = quotes[p.ticker];
-      const sec = SECURITY_LOOKUP.find(s => s.ticker === p.ticker);
-      return [p.ticker, sec?.wkn || "", sec?.isin || "", q?.name || p.ticker, typeLabel[q?.type] || "", q?.sector || "", p.shares, p.avgPrice?.toFixed(2), q?.price?.toFixed(2), q?.currency || "EUR", p.value?.toFixed(2), p.valueEUR?.toFixed(2), p.gainEUR?.toFixed(2), p.gainPct?.toFixed(2), q?.dividend || 0, p.buyDate || ""].map(v => `"${v}"`).join(";");
-    });
-    const csv = "\uFEFF" + [headers.join(";"), ...rows].join("\n");
-    const blob = new Blob([csv], {
-      type: "text/csv;charset=utf-8"
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `depot-export-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [portfolioMetrics, quotes]);
 
   // Load data — fetches ONLY portfolio+watchlist from Worker, rest from mock
   const loadData = useCallback(async (isRefresh = false) => {
@@ -3328,6 +3310,24 @@ function PortfolioApp() {
     });
     return warnings;
   }, [sectorAllocation, regionAllocation, portfolioMetrics, allocationTotal]);
+  const exportCSV = useCallback(() => {
+    const headers = ["Ticker", "WKN", "ISIN", "Name", "Typ", "Sektor", "Stk.", "Kaufkurs", "Aktuell", "Währung", "Wert (Orig.)", "Wert (EUR)", "G/V (EUR)", "G/V %", "Div./Aktie", "Kaufdatum"];
+    const rows = portfolioMetrics.positions.map(p => {
+      const q = quotes[p.ticker];
+      const sec = SECURITY_LOOKUP.find(s => s.ticker === p.ticker);
+      return [p.ticker, sec?.wkn || "", sec?.isin || "", q?.name || p.ticker, typeLabel[q?.type] || "", q?.sector || "", p.shares, p.avgPrice?.toFixed(2), q?.price?.toFixed(2), q?.currency || "EUR", p.value?.toFixed(2), p.valueEUR?.toFixed(2), p.gainEUR?.toFixed(2), p.gainPct?.toFixed(2), q?.dividend || 0, p.buyDate || ""].map(v => `"${v}"`).join(";");
+    });
+    const csv = "\uFEFF" + [headers.join(";"), ...rows].join("\n");
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8"
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `depot-export-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [portfolioMetrics, quotes]);
 
   // Unique sectors from all quotes for filtering
   const allSectors = useMemo(() => {
@@ -6601,7 +6601,6 @@ function PortfolioApp() {
 // ─── Mount App ───
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(/*#__PURE__*/React.createElement(PortfolioApp, null));
-
   </script>
 </body>
 </html>
