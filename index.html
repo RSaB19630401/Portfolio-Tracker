@@ -11,6 +11,7 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script>console.time("babel-compile"); console.log("⏳ Babel loaded, compiling JSX...");</script>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; padding: 0; background: #0a0f1e; font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
@@ -27,11 +28,15 @@
     <div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#818cf8;font-family:DM Sans,sans-serif">
       <div style="text-align:center">
         <div style="font-size:48px;margin-bottom:16px;animation:pulse 1.5s ease-in-out infinite">📈</div>
-        <div style="font-size:18px;font-weight:600">PortfolioTracker wird geladen...</div>
+        <div style="font-size:18px;font-weight:600">PortfolioTracker</div>
+        <div style="font-size:13px;color:#64748b;margin-top:8px" id="boot-status">JSX wird kompiliert...</div>
       </div>
     </div>
   </div>
   <script type="text/babel">
+console.timeEnd("babel-compile");
+console.time("babel+init");
+console.log("✅ Babel compiled, React starting...");
 const { useState, useEffect, useCallback, useMemo } = React;
 
 // ─── Persistent Storage Helper ───
@@ -613,6 +618,7 @@ function PortfolioApp() {
   const [analysisSort, setAnalysisSort] = useState({ field: "signal", dir: "asc" });
   const [selectedDetail, setSelectedDetail] = useState(null); // ticker for detail view
   const [dataSource, setDataSource] = useState("loading"); // "live", "cache", "mock", "loading"
+  const [loadStatus, setLoadStatus] = useState("App wird initialisiert...");
   const [newsData, setNewsData] = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsFilter, setNewsFilter] = useState("all"); // "all", "fakt", "empfehlung", "sonstige"
@@ -644,10 +650,13 @@ function PortfolioApp() {
   // Load data — fetches ONLY portfolio+watchlist from Worker, rest from mock
   const loadData = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
+    console.time("loadData total");
+    setLoadStatus("Portfolio wird geladen...");
     const saved = await Storage.get("portfolio-positions");
     if (saved) setPortfolio(saved);
     const savedWatch = await Storage.get("portfolio-watchlist");
     if (savedWatch) setWatchlist(savedWatch);
+    console.timeLog("loadData total", "storage loaded");
 
     // Phase 1: Only portfolio + watchlist tickers need live data
     const liveTickers = [...new Set([
@@ -657,6 +666,9 @@ function PortfolioApp() {
 
     const q = {}, h = {};
     let source = "mock";
+
+    setLoadStatus(`Kurse für ${liveTickers.length} Werte abrufen...`);
+    console.log("Live tickers to fetch:", liveTickers.length, liveTickers.slice(0, 5).join(", "), "...");
 
     // ── Try live fetch (only user's tickers) ──
     if (liveTickers.length > 0) {
@@ -711,6 +723,8 @@ function PortfolioApp() {
     }
 
     // Phase 2: Fill ALL remaining tickers from mock (instant, no API)
+    setLoadStatus("Mock-Daten laden...");
+    console.timeLog("loadData total", "live fetch done, filling mock");
     Object.keys(MOCK_QUOTES).forEach(t => {
       if (!q[t]) {
         q[t] = { ...MOCK_QUOTES[t], ticker: t };
@@ -723,6 +737,8 @@ function PortfolioApp() {
     setDataSource(source);
 
     // Generate recommendations
+    setLoadStatus("Analyse berechnen...");
+    console.timeLog("loadData total", "starting recommendations");
     const recs = [];
     Object.entries(q).forEach(([ticker, quote]) => {
       const hist = h[ticker];
@@ -742,6 +758,7 @@ function PortfolioApp() {
     setRecommendations(recs);
     setLastUpdate(new Date());
     setLoading(false);
+    console.timeEnd("loadData total");
   }, []);
 
   // Initial load
@@ -2389,7 +2406,7 @@ function PortfolioApp() {
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: "48px", marginBottom: "16px", animation: "pulse 1.5s ease-in-out infinite" }}>📈</div>
           <div style={{ fontSize: "18px", fontWeight: 600, color: "#818cf8" }}>Lade Marktdaten...</div>
-          <div style={{ fontSize: "13px", color: "#64748b", marginTop: "8px" }}>Verbinde mit Yahoo Finance</div>
+          <div style={{ fontSize: "13px", color: "#94a3b8", marginTop: "8px" }}>{loadStatus}</div>
         </div>
       </div>
     );
@@ -2603,6 +2620,8 @@ function PortfolioApp() {
 
 
     // ─── Mount App ───
+    console.timeEnd("babel+init");
+    console.log("✅ App mounting...");
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<PortfolioApp />);
   </script>
