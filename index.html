@@ -613,6 +613,10 @@ function PortfolioApp() {
   const [analysisSort, setAnalysisSort] = useState({ field: "signal", dir: "asc" });
   const [selectedDetail, setSelectedDetail] = useState(null); // ticker for detail view
   const [dataSource, setDataSource] = useState("loading"); // "live", "cache", "mock", "loading"
+  const [newsData, setNewsData] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsFilter, setNewsFilter] = useState("all"); // "all", "fakt", "empfehlung", "sonstige"
+  const [newsTicker, setNewsTicker] = useState("all"); // "all" or specific ticker
 
   // CSV Export
   const exportCSV = useCallback(() => {
@@ -775,6 +779,35 @@ function PortfolioApp() {
     }, REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [loadData]);
+
+  // Load news for portfolio tickers
+  const loadNews = useCallback(async () => {
+    setNewsLoading(true);
+    try {
+      // Get tickers from portfolio + watchlist (only Yahoo-compatible)
+      const tickers = [...new Set([
+        ...portfolio.map(p => p.ticker),
+        ...watchlist,
+      ])].filter(isYahooTicker).slice(0, 25);
+
+      if (tickers.length === 0) { setNewsLoading(false); return; }
+
+      const resp = await fetch(`${WORKER_URL}/api/news?tickers=${tickers.join(",")}&limit=60`, {
+        signal: AbortSignal.timeout(15000),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        setNewsData(data.articles || []);
+        // Cache for offline
+        await Storage.set("portfolio-news-cache", { _ts: Date.now(), articles: data.articles || [] });
+      }
+    } catch (e) {
+      console.warn("News fetch failed, trying cache:", e.message);
+      const cached = await Storage.get("portfolio-news-cache");
+      if (cached && cached.articles) setNewsData(cached.articles);
+    }
+    setNewsLoading(false);
+  }, [portfolio, watchlist]);
 
   // Save portfolio changes
   useEffect(() => {
@@ -1624,17 +1657,29 @@ function PortfolioApp() {
         </div>
 
         {/* Dividend Quick Summary */}
-        <div style={{ ...S.card, marginTop: "20px", cursor: "pointer" }} onClick={() => setTab("dividenden")}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <h2 style={{ ...S.h2, margin: "0 0 4px" }}>💰 Dividenden-Übersicht</h2>
-              <p style={{ margin: 0, fontSize: "13px", color: "#94a3b8" }}>
-                {dividendMetrics.positions.length} Positionen zahlen Dividende · Rendite: {dividendMetrics.portfolioYield.toFixed(2)}%
-              </p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "20px" }} className="pt-grid-2col">
+          <div style={{ ...S.card, cursor: "pointer" }} onClick={() => setTab("dividenden")}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h2 style={{ ...S.h2, margin: "0 0 4px" }}>💰 Dividenden</h2>
+                <p style={{ margin: 0, fontSize: "13px", color: "#94a3b8" }}>
+                  {dividendMetrics.positions.length} Zahler · {dividendMetrics.portfolioYield.toFixed(2)}% Rendite
+                </p>
+              </div>
+              <div style={{ fontSize: "22px", fontWeight: 700, color: "#10b981" }}>{fmtEUR(dividendMetrics.totalDivEUR)}</div>
             </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "24px", fontWeight: 700, color: "#10b981" }}>{fmtEUR(dividendMetrics.totalDivEUR)}</div>
-              <div style={{ fontSize: "12px", color: "#64748b" }}>erwartet p.a. → Details</div>
+          </div>
+          <div style={{ ...S.card, cursor: "pointer" }} onClick={() => { setTab("news"); if (newsData.length === 0) loadNews(); }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h2 style={{ ...S.h2, margin: "0 0 4px" }}>📰 News</h2>
+                <p style={{ margin: 0, fontSize: "13px", color: "#94a3b8" }}>
+                  {newsData.length > 0
+                    ? `${newsData.filter(n => n.category === "fakt").length} Fakten · ${newsData.filter(n => n.category === "empfehlung").length} Empfehlungen`
+                    : "Klicken zum Laden"}
+                </p>
+              </div>
+              <div style={{ fontSize: "22px" }}>{newsData.length > 0 ? newsData.length : "→"}</div>
             </div>
           </div>
         </div>
@@ -2066,6 +2111,170 @@ function PortfolioApp() {
     );
   }
 
+  // ─── News View (Fakten & Empfehlungen) ───
+  function NewsView() {
+    // Load news on mount
+    useEffect(() => { if (newsData.length === 0) loadNews(); }, []);
+
+    const categoryStyle = (cat) => ({
+      fakt: { bg: "#10b98120", border: "#10b98140", color: "#34d399", icon: "📊", label: "Fakt" },
+      empfehlung: { bg: "#818cf820", border: "#818cf840", color: "#818cf8", icon: "💡", label: "Empfehlung" },
+      sonstige: { bg: "#64748b20", border: "#64748b40", color: "#94a3b8", icon: "📰", label: "Nachricht" },
+    }[cat] || { bg: "#64748b20", border: "#64748b40", color: "#94a3b8", icon: "📰", label: "Nachricht" });
+
+    // Get unique tickers from news
+    const newsTickers = useMemo(() => {
+      const tickers = new Set();
+      newsData.forEach(n => { if (n.ticker) tickers.add(n.ticker); });
+      return [...tickers].sort();
+    }, [newsData]);
+
+    // Filter
+    const filtered = useMemo(() => {
+      let data = newsData;
+      if (newsFilter !== "all") data = data.filter(n => n.category === newsFilter);
+      if (newsTicker !== "all") data = data.filter(n => n.ticker === newsTicker);
+      return data;
+    }, [newsData, newsFilter, newsTicker]);
+
+    const faktenCount = newsData.filter(n => n.category === "fakt").length;
+    const empfCount = newsData.filter(n => n.category === "empfehlung").length;
+
+    const chipStyle = (active) => ({
+      padding: "6px 14px", borderRadius: "8px", border: "none", cursor: "pointer",
+      fontSize: "13px", fontWeight: 500, fontFamily: "inherit", transition: "all 0.15s",
+      background: active ? "#818cf820" : "#1e293b",
+      color: active ? "#818cf8" : "#94a3b8",
+      border: active ? "1px solid #818cf840" : "1px solid #334155",
+    });
+
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+          <div>
+            <h2 style={{ margin: "0 0 8px", fontSize: "24px", color: "#f1f5f9" }}>📰 Nachrichten & Analysen</h2>
+            <p style={{ margin: "0", color: "#64748b", fontSize: "14px" }}>
+              {newsData.length} Artikel · {faktenCount} Fakten · {empfCount} Empfehlungen
+            </p>
+          </div>
+          <button style={{ ...S.btn("ghost"), padding: "8px 16px", fontSize: "13px" }}
+            onClick={loadNews} disabled={newsLoading}>
+            {newsLoading ? "⏳ Lade..." : "⟳ Aktualisieren"}
+          </button>
+        </div>
+
+        {/* Category Filter */}
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
+          {[
+            { id: "all", label: "Alle", count: newsData.length },
+            { id: "fakt", label: "📊 Fakten", count: faktenCount },
+            { id: "empfehlung", label: "💡 Empfehlungen", count: empfCount },
+            { id: "sonstige", label: "📰 Sonstige", count: newsData.length - faktenCount - empfCount },
+          ].map(f => (
+            <button key={f.id} style={chipStyle(newsFilter === f.id)}
+              onClick={() => setNewsFilter(f.id)}>
+              {f.label} ({f.count})
+            </button>
+          ))}
+          <span style={{ borderLeft: "1px solid #334155", margin: "0 4px" }} />
+          <select style={{
+            ...S.input, width: "auto", padding: "6px 12px", fontSize: "13px",
+            background: "#1e293b", color: "#94a3b8",
+          }}
+            value={newsTicker} onChange={e => setNewsTicker(e.target.value)}>
+            <option value="all">Alle Werte</option>
+            {newsTickers.map(t => {
+              const q = quotes[t];
+              return <option key={t} value={t}>{q?.name || t}</option>;
+            })}
+          </select>
+        </div>
+
+        {/* Info Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }} className="pt-grid-2col">
+          <div style={{ ...S.card, borderLeft: "3px solid #10b981" }}>
+            <div style={{ fontSize: "13px", color: "#64748b", marginBottom: "4px" }}>📊 Fakten</div>
+            <div style={{ fontSize: "13px", color: "#94a3b8", lineHeight: 1.6 }}>
+              Geschäftsberichte, Quartalszahlen, Dividenden, Übernahmen, Personalien, Produktneuheiten — verifizierbare Unternehmensmeldungen
+            </div>
+          </div>
+          <div style={{ ...S.card, borderLeft: "3px solid #818cf8" }}>
+            <div style={{ fontSize: "13px", color: "#64748b", marginBottom: "4px" }}>💡 Empfehlungen</div>
+            <div style={{ fontSize: "13px", color: "#94a3b8", lineHeight: 1.6 }}>
+              Analysten-Ratings, Kursziele, Upgrades/Downgrades, Broker-Empfehlungen — meinungsbasierte Einschätzungen Dritter
+            </div>
+          </div>
+        </div>
+
+        {/* News Loading */}
+        {newsLoading && newsData.length === 0 && (
+          <div style={{ textAlign: "center", padding: "48px", color: "#64748b" }}>
+            <div style={{ fontSize: "32px", marginBottom: "12px", animation: "pulse 1.5s ease-in-out infinite" }}>📡</div>
+            <div>Nachrichten werden geladen...</div>
+          </div>
+        )}
+
+        {/* News List */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {filtered.map((article, i) => {
+            const cat = categoryStyle(article.category);
+            const q = quotes[article.ticker];
+            const timeDiff = article.publishedAt ? Math.floor((Date.now() - new Date(article.publishedAt).getTime()) / 3600000) : null;
+            const timeStr = timeDiff !== null ? (timeDiff < 1 ? "gerade" : timeDiff < 24 ? `vor ${timeDiff}h` : `vor ${Math.floor(timeDiff / 24)}d`) : "";
+            return (
+              <a key={i} href={article.link} target="_blank" rel="noopener noreferrer"
+                style={{
+                  ...S.card, textDecoration: "none", display: "grid",
+                  gridTemplateColumns: "auto 1fr auto", gap: "14px", alignItems: "center",
+                  borderLeft: `3px solid ${cat.color}`, padding: "14px 18px",
+                  transition: "border-color 0.2s, background 0.2s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "#1e293b"}
+                onMouseLeave={e => e.currentTarget.style.background = ""}>
+                {/* Category Badge */}
+                <div style={{ textAlign: "center", minWidth: "70px" }}>
+                  <span style={{
+                    display: "inline-block", padding: "4px 10px", borderRadius: "6px",
+                    background: cat.bg, border: `1px solid ${cat.border}`,
+                    fontSize: "11px", fontWeight: 600, color: cat.color,
+                  }}>
+                    {cat.icon} {cat.label}
+                  </span>
+                </div>
+                {/* Content */}
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: "14px", color: "#f1f5f9", lineHeight: 1.4, marginBottom: "4px" }}>
+                    {article.title}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#64748b" }}>
+                    {article.publisher && <span>{article.publisher}</span>}
+                    {timeStr && <span> · {timeStr}</span>}
+                  </div>
+                </div>
+                {/* Ticker Badge */}
+                <div style={{ textAlign: "right" }}>
+                  <span style={{
+                    display: "inline-block", padding: "3px 8px", borderRadius: "6px",
+                    background: "#0f172a", fontSize: "11px", color: "#94a3b8",
+                    border: "1px solid #1e293b", cursor: "pointer",
+                  }}
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); setSelectedDetail(article.ticker); }}>
+                    {q?.name?.split(" ")[0] || article.ticker?.split(".")[0]}
+                  </span>
+                </div>
+              </a>
+            );
+          })}
+          {!newsLoading && filtered.length === 0 && (
+            <div style={{ textAlign: "center", padding: "48px", color: "#64748b" }}>
+              {newsData.length === 0 ? "Noch keine Nachrichten geladen — klicke „Aktualisieren"" : "Keine Ergebnisse für den gewählten Filter"}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // ─── Detail Modal ───
   function DetailModal({ ticker }) {
     const q = quotes[ticker];
@@ -2241,6 +2450,7 @@ function PortfolioApp() {
           { id: "dashboard", label: "Dashboard", icon: "📊" },
           { id: "portfolio", label: "Depot", icon: "💼" },
           { id: "dividenden", label: "Dividenden", icon: "💰" },
+          { id: "news", label: "News", icon: "📰" },
           { id: "analysis", label: "Analyse", icon: "🔍" },
           { id: "watchlist", label: "Watchlist", icon: "👁" },
         ].map(t => (
@@ -2323,6 +2533,7 @@ function PortfolioApp() {
         {tab === "dashboard" && <Dashboard />}
         {tab === "portfolio" && <PortfolioView />}
         {tab === "dividenden" && <DividendenView />}
+        {tab === "news" && <NewsView />}
         {tab === "analysis" && <AnalysisView />}
         {tab === "watchlist" && <WatchlistView />}
       </div>
