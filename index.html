@@ -8,19 +8,16 @@
   <title>PortfolioTracker</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script>console.time("babel-compile"); console.log("⏳ Babel loaded, compiling JSX...");</script>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; padding: 0; background: #0a0f1e; font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
     #root { min-height: 100vh; }
-    /* PWA-like scrolling */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+    #boot-progress { transition: width 0.3s; }
   </style>
 </head>
 <body>
@@ -29,10 +26,27 @@
       <div style="text-align:center">
         <div style="font-size:48px;margin-bottom:16px;animation:pulse 1.5s ease-in-out infinite">📈</div>
         <div style="font-size:18px;font-weight:600">PortfolioTracker</div>
-        <div style="font-size:13px;color:#64748b;margin-top:8px" id="boot-status">JSX wird kompiliert...</div>
+        <div style="font-size:13px;color:#64748b;margin-top:12px" id="boot-status">Lade Bibliotheken...</div>
+        <div style="width:200px;height:3px;background:#1e293b;border-radius:2px;margin:12px auto 0">
+          <div id="boot-progress" style="width:0%;height:100%;background:#818cf8;border-radius:2px"></div>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- Scripts load AFTER static HTML is visible -->
+  <script>
+    console.time("total-boot");
+    var bs = document.getElementById('boot-status');
+    var bp = document.getElementById('boot-progress');
+    function bootMsg(msg, pct) { if(bs) bs.textContent = msg; if(bp) bp.style.width = pct + '%'; }
+    bootMsg('React laden...', 10);
+  </script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script>bootMsg('Babel laden (5 MB)...', 30);</script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script>bootMsg('JSX kompilieren...', 70); console.time("babel-compile");</script>
   <script type="text/babel">
 console.timeEnd("babel-compile");
 console.time("babel+init");
