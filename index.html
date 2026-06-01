@@ -641,105 +641,80 @@ function PortfolioApp() {
     a.click(); URL.revokeObjectURL(url);
   }, [portfolioMetrics, quotes]);
 
-  // Load data — tries Worker API first, falls back to mock
+  // Load data — fetches ONLY portfolio+watchlist from Worker, rest from mock
   const loadData = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
-    // Load saved portfolio & watchlist
     const saved = await Storage.get("portfolio-positions");
     if (saved) setPortfolio(saved);
     const savedWatch = await Storage.get("portfolio-watchlist");
     if (savedWatch) setWatchlist(savedWatch);
 
-    const allTickers = [...new Set([
+    // Phase 1: Only portfolio + watchlist tickers need live data
+    const liveTickers = [...new Set([
       ...(saved || DEFAULT_PORTFOLIO).map(p => p.ticker),
       ...(savedWatch || watchlist),
-      ...Object.keys(MOCK_QUOTES)
-    ])];
+    ])].filter(isYahooTicker);
 
     const q = {}, h = {};
     let source = "mock";
 
-    // ── Try live fetch from Worker ──
-    const yahooTickers = allTickers.filter(isYahooTicker);
-    try {
-      // Fetch in chunks of 30 to keep URL length manageable
-      const chunks = [];
-      for (let i = 0; i < yahooTickers.length; i += 30) {
-        chunks.push(yahooTickers.slice(i, i + 30));
-      }
-      const allResults = {};
-      for (const chunk of chunks) {
-        const resp = await fetch(`${WORKER_URL}/api/quotes?tickers=${chunk.join(",")}`, {
-          signal: AbortSignal.timeout(12000),
+    // ── Try live fetch (only user's tickers) ──
+    if (liveTickers.length > 0) {
+      try {
+        // Single batch for most portfolios (up to 30 tickers)
+        const resp = await fetch(`${WORKER_URL}/api/quotes?tickers=${liveTickers.join(",")}`, {
+          signal: AbortSignal.timeout(10000),
         });
         if (resp.ok) {
           const data = await resp.json();
-          if (data.quotes) Object.assign(allResults, data.quotes);
-        }
-      }
-
-      const liveCount = Object.keys(allResults).length;
-      if (liveCount > 0) {
-        source = "live";
-        // Cache API response for offline fallback
-        await Storage.set("portfolio-api-cache", { _ts: Date.now(), data: allResults });
-
-        Object.entries(allResults).forEach(([ticker, liveData]) => {
-          // Merge: live price data + MOCK_QUOTES sector/type as fallback
-          const mock = MOCK_QUOTES[ticker] || {};
-          q[ticker] = {
-            ticker,
-            name: liveData.name || mock.name || ticker,
-            price: liveData.price,
-            change: liveData.change,
-            changePct: liveData.changePct,
-            prev: liveData.prev,
-            high: liveData.high,
-            low: liveData.low,
-            volume: liveData.volume,
-            currency: liveData.currency || mock.currency || "EUR",
-            type: liveData.type || mock.type || "stock",
-            sector: mock.sector || liveData.exchange || "Sonstige",
-            pe: mock.pe, // Yahoo doesn't return PE in chart endpoint
-            dividend: liveData.dividend?.annualDiv || mock.dividend || 0,
-            marketState: liveData.marketState,
-          };
-          // Use real history from API
-          if (liveData.history && liveData.history.length > 5) {
-            h[ticker] = liveData.history;
-          } else {
-            h[ticker] = generateHistory(liveData.price);
+          if (data.quotes) {
+            source = "live";
+            await Storage.set("portfolio-api-cache", { _ts: Date.now(), data: data.quotes });
+            Object.entries(data.quotes).forEach(([ticker, liveData]) => {
+              const mock = MOCK_QUOTES[ticker] || {};
+              q[ticker] = {
+                ticker,
+                name: liveData.name || mock.name || ticker,
+                price: liveData.price, change: liveData.change, changePct: liveData.changePct,
+                prev: liveData.prev, high: liveData.high, low: liveData.low,
+                volume: liveData.volume,
+                currency: liveData.currency || mock.currency || "EUR",
+                type: liveData.type || mock.type || "stock",
+                sector: mock.sector || liveData.exchange || "Sonstige",
+                pe: mock.pe, dividend: liveData.dividend?.annualDiv || mock.dividend || 0,
+                marketState: liveData.marketState,
+              };
+              h[ticker] = liveData.history?.length > 5 ? liveData.history : generateHistory(liveData.price);
+            });
           }
-        });
-      }
-    } catch (e) {
-      console.warn("Live fetch failed, trying cache:", e.message);
-      // Try cached API data
-      const cached = await Storage.get("portfolio-api-cache");
-      if (cached && cached.data && Date.now() - cached._ts < 24 * 3600 * 1000) {
-        source = "cache";
-        Object.entries(cached.data).forEach(([ticker, liveData]) => {
-          const mock = MOCK_QUOTES[ticker] || {};
-          q[ticker] = {
-            ticker,
-            name: liveData.name || mock.name || ticker,
-            price: liveData.price, change: liveData.change, changePct: liveData.changePct,
-            prev: liveData.prev, high: liveData.high, low: liveData.low, volume: liveData.volume,
-            currency: liveData.currency || mock.currency || "EUR",
-            type: liveData.type || mock.type || "stock",
-            sector: mock.sector || "Sonstige",
-            pe: mock.pe, dividend: liveData.dividend?.annualDiv || mock.dividend || 0,
-          };
-          h[ticker] = liveData.history?.length > 5 ? liveData.history : generateHistory(liveData.price);
-        });
+        }
+      } catch (e) {
+        console.warn("Live fetch failed, trying cache:", e.message);
+        const cached = await Storage.get("portfolio-api-cache");
+        if (cached && cached.data && Date.now() - cached._ts < 24 * 3600 * 1000) {
+          source = "cache";
+          Object.entries(cached.data).forEach(([ticker, liveData]) => {
+            const mock = MOCK_QUOTES[ticker] || {};
+            q[ticker] = {
+              ticker, name: liveData.name || mock.name || ticker,
+              price: liveData.price, change: liveData.change, changePct: liveData.changePct,
+              prev: liveData.prev, high: liveData.high, low: liveData.low, volume: liveData.volume,
+              currency: liveData.currency || mock.currency || "EUR",
+              type: liveData.type || mock.type || "stock",
+              sector: mock.sector || "Sonstige",
+              pe: mock.pe, dividend: liveData.dividend?.annualDiv || mock.dividend || 0,
+            };
+            h[ticker] = liveData.history?.length > 5 ? liveData.history : generateHistory(liveData.price);
+          });
+        }
       }
     }
 
-    // ── Fill remaining tickers from MOCK_QUOTES (funds, bonds, WKN-only) ──
-    allTickers.forEach(t => {
-      if (!q[t] && MOCK_QUOTES[t]) {
+    // Phase 2: Fill ALL remaining tickers from mock (instant, no API)
+    Object.keys(MOCK_QUOTES).forEach(t => {
+      if (!q[t]) {
         q[t] = { ...MOCK_QUOTES[t], ticker: t };
-        h[t] = h[t] || generateHistory(MOCK_QUOTES[t].price);
+        h[t] = generateHistory(MOCK_QUOTES[t].price);
       }
     });
 
