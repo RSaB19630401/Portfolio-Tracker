@@ -15,7 +15,6 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
     @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
     @media (max-width: 900px) {
       .pt-nav { flex-wrap: wrap !important; padding: 8px 12px !important; gap: 4px !important; }
@@ -23,16 +22,12 @@
       .pt-nav-search { width: 100% !important; min-width: unset !important; order: 10; }
       .pt-nav-search input { width: 100% !important; }
       .pt-container { padding: 12px !important; }
-      .pt-grid-main { grid-template-columns: 1fr !important; }
-      .pt-grid-3col { grid-template-columns: 1fr !important; }
-      .pt-grid-2col { grid-template-columns: 1fr !important; }
-      .pt-card-grid-6 { grid-template-columns: 1fr !important; }
+      .pt-grid-main, .pt-grid-3col, .pt-grid-2col, .pt-card-grid-6 { grid-template-columns: 1fr !important; }
     }
     @media (max-width: 600px) {
       .pt-nav button { padding: 8px 10px !important; font-size: 12px !important; }
       .pt-logo { font-size: 16px !important; margin-right: 8px !important; }
     }
-    .pt-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   </style>
 </head>
 <body>
@@ -825,6 +820,16 @@ const SECURITY_LOOKUP = [
   isin: "SE0006425815",
   ticker: "PCELL.ST",
   name: "PowerCell Sweden AB"
+}, {
+  wkn: "A2PV3A",
+  isin: "AU0000066086",
+  ticker: "VUL.DE",
+  name: "Vulcan Energy Resources Ltd."
+}, {
+  wkn: "A0WMPJ",
+  isin: "DE000A0WMPJ6",
+  ticker: "AIXA.DE",
+  name: "AIXTRON SE"
 }];
 function lookupSecurity(query) {
   if (!query || query.trim().length === 0) return [];
@@ -2603,6 +2608,36 @@ const MOCK_QUOTES = {
     dividend: 0,
     sector: "Energie",
     currency: "SEK",
+    type: "stock"
+  },
+  "VUL.DE": {
+    name: "Vulcan Energy Resources Ltd.",
+    price: 2.18,
+    change: 0.07,
+    changePct: 3.22,
+    prev: 2.11,
+    high: 2.22,
+    low: 2.10,
+    volume: 391000,
+    pe: null,
+    dividend: 0,
+    sector: "Energie",
+    currency: "EUR",
+    type: "stock"
+  },
+  "AIXA.DE": {
+    name: "AIXTRON SE",
+    price: 54.64,
+    change: -2.76,
+    changePct: -4.81,
+    prev: 57.40,
+    high: 57.32,
+    low: 52.22,
+    volume: 207000,
+    pe: 22.9,
+    dividend: 0.87,
+    sector: "Halbleiter",
+    currency: "EUR",
     type: "stock"
   }
 };
