@@ -326,12 +326,12 @@ const SECURITY_LOOKUP = [
 }, {
   wkn: "850727",
   isin: "CH0012032048",
-  ticker: "ROG.SW",
+  ticker: "RHO.DE",
   name: "Roche Holding AG"
 }, {
   wkn: "883035",
   isin: "CH0012005267",
-  ticker: "NOVN.SW",
+  ticker: "NOT.DE",
   name: "Novartis AG"
 }, {
   wkn: "A1W6XZ",
@@ -593,8 +593,8 @@ const SECURITY_LOOKUP = [
 }, {
   wkn: "580850",
   isin: "AU000000EOS8",
-  ticker: "EOS.AX",
-  name: "Electro Optic Systems Holdings Ltd"
+  ticker: "GP6.F",
+  name: "Electro Optic Systems Holdings Ltd."
 }, {
   wkn: "A2AR9A",
   isin: "US81762P1021",
@@ -720,7 +720,7 @@ const SECURITY_LOOKUP = [
 }, {
   wkn: "919730",
   isin: "CH0012221716",
-  ticker: "ABBN.SW",
+  ticker: "ABBN.DE",
   name: "ABB Ltd."
 }, {
   wkn: "857658",
@@ -808,7 +808,7 @@ const SECURITY_LOOKUP = [
 {
   wkn: "A12A18",
   isin: "NO0010716582",
-  ticker: "AKSO.OL",
+  ticker: "AKE1.F",
   name: "Aker Solutions ASA"
 }, {
   wkn: "A2N7XK",
@@ -818,7 +818,7 @@ const SECURITY_LOOKUP = [
 }, {
   wkn: "A14TK6",
   isin: "SE0006425815",
-  ticker: "PCELL.ST",
+  ticker: "27W.DE",
   name: "PowerCell Sweden AB"
 }, {
   wkn: "A2PV3A",
@@ -1144,34 +1144,34 @@ const MOCK_QUOTES = {
     currency: "EUR",
     type: "stock"
   },
-  "ROG.SW": {
+  "RHO.DE": {
     name: "Roche Holding AG",
-    price: 278.50,
+    price: 268.20,
     change: 1.30,
-    changePct: 0.47,
-    prev: 277.20,
-    high: 280.10,
-    low: 276.40,
+    changePct: 0.49,
+    prev: 266.90,
+    high: 269.50,
+    low: 266.00,
     volume: 890000,
     pe: 15.2,
     dividend: 9.60,
     sector: "Pharma",
-    currency: "CHF",
+    currency: "EUR",
     type: "stock"
   },
-  "NOVN.SW": {
+  "NOT.DE": {
     name: "Novartis AG",
-    price: 94.56,
-    change: 0.42,
-    changePct: 0.45,
-    prev: 94.14,
-    high: 95.20,
-    low: 93.80,
+    price: 100.70,
+    change: 1.98,
+    changePct: 2.01,
+    prev: 98.72,
+    high: 101.50,
+    low: 98.20,
     volume: 2345000,
     pe: 14.8,
     dividend: 3.50,
     sector: "Pharma",
-    currency: "CHF",
+    currency: "EUR",
     type: "stock"
   },
   "ASML.AS": {
@@ -1900,19 +1900,19 @@ const MOCK_QUOTES = {
     currency: "EUR",
     type: "etf"
   },
-  "EOS.AX": {
+  "GP6.F": {
     name: "Electro Optic Systems Holdings",
-    price: 1.85,
-    change: -0.03,
-    changePct: -1.60,
-    prev: 1.88,
-    high: 1.90,
-    low: 1.82,
-    volume: 180000,
+    price: 7.43,
+    change: 0.83,
+    changePct: 12.65,
+    prev: 6.60,
+    high: 7.43,
+    low: 7.10,
+    volume: 585000,
     pe: null,
     dividend: 0,
     sector: "Rüstung",
-    currency: "AUD",
+    currency: "EUR",
     type: "stock"
   },
   "SEDG": {
@@ -2276,19 +2276,19 @@ const MOCK_QUOTES = {
     currency: "JPY",
     type: "stock"
   },
-  "ABBN.SW": {
+  "ABBN.DE": {
     name: "ABB Ltd.",
-    price: 51.20,
+    price: 49.80,
     change: 0.42,
-    changePct: 0.83,
-    prev: 50.78,
-    high: 51.50,
-    low: 50.60,
+    changePct: 0.85,
+    prev: 49.38,
+    high: 50.10,
+    low: 49.20,
     volume: 3200000,
     pe: 24.8,
     dividend: 2.0,
     sector: "Robotik",
-    currency: "CHF",
+    currency: "EUR",
     type: "stock"
   },
   "6506.T": {
@@ -2565,19 +2565,19 @@ const MOCK_QUOTES = {
     type: "stock"
   },
   // --- Weitere Einzelwerte ---
-  "AKSO.OL": {
+  "AKE1.F": {
     name: "Aker Solutions ASA",
-    price: 42.10,
-    change: -0.85,
-    changePct: -1.98,
-    prev: 42.95,
-    high: 43.20,
-    low: 41.80,
-    volume: 950000,
+    price: 3.58,
+    change: -0.07,
+    changePct: -1.92,
+    prev: 3.65,
+    high: 3.68,
+    low: 3.55,
+    volume: 5000,
     pe: 8.0,
     dividend: 7.5,
     sector: "Energie",
-    currency: "NOK",
+    currency: "EUR",
     type: "stock"
   },
   "CDPR.V": {
@@ -2595,19 +2595,19 @@ const MOCK_QUOTES = {
     currency: "CAD",
     type: "stock"
   },
-  "PCELL.ST": {
+  "27W.DE": {
     name: "PowerCell Sweden AB",
-    price: 35.20,
-    change: 1.10,
-    changePct: 3.22,
-    prev: 34.10,
-    high: 35.80,
-    low: 33.90,
-    volume: 320000,
+    price: 3.10,
+    change: 0.10,
+    changePct: 3.33,
+    prev: 3.00,
+    high: 3.15,
+    low: 2.98,
+    volume: 50000,
     pe: null,
     dividend: 0,
     sector: "Energie",
-    currency: "SEK",
+    currency: "EUR",
     type: "stock"
   },
   "VUL.DE": {
